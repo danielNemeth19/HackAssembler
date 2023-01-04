@@ -47,13 +47,10 @@ func (symbolTable *SymbolTable) storeVariable(variable string) int {
 	address := symbolTable.nextFreeMem
 	symbolTable.table[variable] = address
 	symbolTable.nextFreeMem++
-	fmt.Printf("nextMem: %d", symbolTable.nextFreeMem)
 	return address
 }
 
-type Parser struct {
-	symbolTable *SymbolTable
-}
+type Parser struct{}
 
 func (parser Parser) isAInstruction(token string) bool {
 	if strings.HasPrefix(token, "@") {
@@ -62,15 +59,15 @@ func (parser Parser) isAInstruction(token string) bool {
 	return false
 }
 
-func (parser Parser) getAddress(token string) int {
-	address, err := strconv.Atoi(token[1:])
-	if err != nil {
-		fmt.Printf("%s must be a symbol\n", token)
-		address, found := parser.symbolTable.getAddress(token[1:])
-		if found != true {
-			fmt.Printf("Address: %d -- Found: %v\n", address, found)
-			address = parser.symbolTable.storeVariable(token[1:])
-		}
+func (parser Parser) getAddress(token string, table *SymbolTable) int {
+	token = token[1:]
+	address, err := strconv.Atoi(token)
+	if err == nil {
+		return address
+	}
+	address, found := table.getAddress(token)
+	if found != true {
+		address = table.storeVariable(token)
 	}
 	return address
 }
@@ -78,8 +75,8 @@ func (parser Parser) getAddress(token string) int {
 type HackCode struct{}
 
 func (code HackCode) translateAInstruction(address int) {
-	mys := fmt.Sprintf("0%015b\n", address)
-	fmt.Printf("Bit representation: %s", mys)
+	mys := fmt.Sprintf("0%015b", address)
+	fmt.Printf("Bit representation: %s\n", mys)
 }
 
 func readHackFile(fp string) ([]string, SymbolTable) {
@@ -121,12 +118,12 @@ func parseArg() string {
 func main() {
 	fp := parseArg()
 	assemblyCode, symbolTable := readHackFile(fp)
-	parser := Parser{symbolTable: &symbolTable}
+	parser := Parser{}
 	hackCode := HackCode{}
 	for _, code := range assemblyCode {
 		if parser.isAInstruction(code) {
 			fmt.Printf("This is A instruction: %s\n", code)
-			address := parser.getAddress(code)
+			address := parser.getAddress(code, &symbolTable)
 			hackCode.translateAInstruction(address)
 		}
 	}
