@@ -17,7 +17,8 @@ func checkError(e error) {
 }
 
 type SymbolTable struct {
-	table map[string]int
+	table       map[string]int
+	nextFreeMem int
 }
 
 func (symbolTable *SymbolTable) initialize() {
@@ -29,16 +30,56 @@ func (symbolTable *SymbolTable) initialize() {
 		initValues[key] = i
 	}
 	symbolTable.table = initValues
+	symbolTable.nextFreeMem = 16
 }
 
-func (symbolTable *SymbolTable) storeSymbol(codeSnippet string, counter int) {
-	symbol := codeSnippet[1 : len(codeSnippet)-1]
-	symbolTable.table[symbol] = counter
+func (symbolTable *SymbolTable) storeLabel(codeSnippet string, counter int) {
+	label := codeSnippet[1 : len(codeSnippet)-1]
+	symbolTable.table[label] = counter
 }
 
-func (symbolTable *SymbolTable) getAddress(symbol string) (address int, found bool) {
-	address, found = symbolTable.table[symbol]
+func (symbolTable *SymbolTable) getAddress(symbol string) (int, bool) {
+	address, found := symbolTable.table[symbol]
 	return address, found
+}
+
+func (symbolTable *SymbolTable) storeVariable(variable string) int {
+	address := symbolTable.nextFreeMem
+	symbolTable.table[variable] = address
+	symbolTable.nextFreeMem++
+	fmt.Printf("nextMem: %d", symbolTable.nextFreeMem)
+	return address
+}
+
+type Parser struct {
+	symbolTable *SymbolTable
+}
+
+func (parser Parser) isAInstruction(token string) bool {
+	if strings.HasPrefix(token, "@") {
+		return true
+	}
+	return false
+}
+
+func (parser Parser) getAddress(token string) int {
+	address, err := strconv.Atoi(token[1:])
+	if err != nil {
+		fmt.Printf("%s must be a symbol\n", token)
+		address, found := parser.symbolTable.getAddress(token[1:])
+		if found != true {
+			fmt.Printf("Address: %d -- Found: %v\n", address, found)
+			address = parser.symbolTable.storeVariable(token[1:])
+		}
+	}
+	return address
+}
+
+type HackCode struct{}
+
+func (code HackCode) translateAInstruction(address int) {
+	mys := fmt.Sprintf("0%015b\n", address)
+	fmt.Printf("Bit representation: %s", mys)
 }
 
 func readHackFile(fp string) ([]string, SymbolTable) {
@@ -55,7 +96,7 @@ func readHackFile(fp string) ([]string, SymbolTable) {
 		if len(subs[0]) > 0 {
 			codeSnippet := strings.TrimSpace(subs[0])
 			if strings.HasPrefix(codeSnippet, "(") {
-				symbolTable.storeSymbol(codeSnippet, counter+1)
+				symbolTable.storeLabel(codeSnippet, counter+1)
 			} else {
 				counter += 1
 				assemblyCode = append(assemblyCode, codeSnippet)
@@ -80,16 +121,15 @@ func parseArg() string {
 func main() {
 	fp := parseArg()
 	assemblyCode, symbolTable := readHackFile(fp)
-	for index, code := range assemblyCode {
-		fmt.Println(index, code)
+	parser := Parser{symbolTable: &symbolTable}
+	hackCode := HackCode{}
+	for _, code := range assemblyCode {
+		if parser.isAInstruction(code) {
+			fmt.Printf("This is A instruction: %s\n", code)
+			address := parser.getAddress(code)
+			hackCode.translateAInstruction(address)
+		}
 	}
-	fmt.Printf("Number of code lines: %d\n", len(assemblyCode))
 	fmt.Printf("Number items in symbol table: %d\n", len(symbolTable.table))
-
-	value, flag := symbolTable.getAddress("novalue")
-	fmt.Printf("Value: %d -- flag %v\n", value, flag)
-
-	value, flag = symbolTable.getAddress("OUTPUT_FIRST")
-	fmt.Printf("Value: %d -- flag %v\n", value, flag)
-
+	fmt.Printf("symbol table: %v\n", symbolTable.table)
 }
