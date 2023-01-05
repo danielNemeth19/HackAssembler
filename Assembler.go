@@ -72,11 +72,24 @@ func (parser Parser) getAddress(token string, table *SymbolTable) int {
 	return address
 }
 
-type HackCode struct{}
+func (parser Parser) parseCInstruction(codeSnippet string) (string, string, string) {
+	var comp, dest, jmp string
+	subs := strings.Split(codeSnippet, "=")
+	if len(subs) == 2 {
+		dest, comp, jmp = subs[0], subs[1], "null"
+	} else {
+		subs = strings.Split(codeSnippet, ";")
+		dest, comp, jmp = "null", subs[0], subs[1]
+	}
+	return comp, dest, jmp
+}
 
-func (code HackCode) translateAInstruction(address int) {
-	mys := fmt.Sprintf("0%015b", address)
-	fmt.Printf("Bit representation: %s\n", mys)
+type HackTranslator struct{}
+
+func (translator HackTranslator) translateAInstruction(address int) string {
+	machineCode := fmt.Sprintf("0%015b", address)
+	//fmt.Printf("Bit representation: %s\n", machineCode)
+	return machineCode
 }
 
 func readHackFile(fp string) ([]string, SymbolTable) {
@@ -119,14 +132,23 @@ func main() {
 	fp := parseArg()
 	assemblyCode, symbolTable := readHackFile(fp)
 	parser := Parser{}
-	hackCode := HackCode{}
-	for _, code := range assemblyCode {
-		if parser.isAInstruction(code) {
-			fmt.Printf("This is A instruction: %s\n", code)
-			address := parser.getAddress(code, &symbolTable)
-			hackCode.translateAInstruction(address)
+	translator := HackTranslator{}
+	var hackCode []string
+	for _, codeSnippet := range assemblyCode {
+		if parser.isAInstruction(codeSnippet) {
+			//fmt.Printf("This is A instruction: %s\n", codeSnippet)
+			address := parser.getAddress(codeSnippet, &symbolTable)
+			code := translator.translateAInstruction(address)
+			hackCode = append(hackCode, code)
+		} else {
+			comp, dest, jmp := parser.parseCInstruction(codeSnippet)
+			fmt.Printf("%s snippet -> %s %s %s\n", codeSnippet, comp, dest, jmp)
 		}
 	}
+
 	fmt.Printf("Number items in symbol table: %d\n", len(symbolTable.table))
 	fmt.Printf("symbol table: %v\n", symbolTable.table)
+	for _, c := range hackCode {
+		fmt.Printf("%s\n", c)
+	}
 }
