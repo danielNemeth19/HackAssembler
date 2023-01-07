@@ -114,7 +114,29 @@ func (translator HackTranslator) translateComp(comp string) string {
 		"D+A": "0000010", "D+M": "1000010", "D-A": "0010011", "D-M": "1010011", "A-D": "0000111",
 		"M-D": "1000111", "D&A": "0000000", "D&M": "1000000", "D|A": "0010101", "D|M": "1010101",
 	}
-	return compMap[comp]
+	hackCode, found := compMap[comp]
+	if found != true {
+		log.Fatalf("Comp %s invalid", comp)
+	}
+	return hackCode
+}
+
+func (translator HackTranslator) translateDest(dest string) string {
+	fmt.Printf("in dest translation: %s\n", dest)
+	destMap := map[string]string{
+		"null": "000", "M": "001", "D": "010", "MD": "011",
+		"A": "100", "AM": "101", "AD": "110", "AMD": "111",
+	}
+	hackCode, found := destMap[dest]
+	if found != true {
+		log.Fatalf("Dest %s invalid", dest)
+	}
+	return hackCode
+}
+
+func (translator HackTranslator) translateJmp(jmp string) string {
+	fmt.Printf("in jmp translation: %s\n", jmp)
+	return jmp
 }
 
 func readHackFile(fp string) ([]string, SymbolTable) {
@@ -171,6 +193,10 @@ func main() {
 			fmt.Printf("%s snippet -> %s %s %s\n", codeSnippet, comp, dest, jmp)
 			compCode := translator.translateComp(comp)
 			fmt.Printf("%s comp\n", compCode)
+			destCode := translator.translateDest(dest)
+			fmt.Printf("%s dest\n", destCode)
+			jmpCode := translator.translateJmp(jmp)
+			fmt.Printf("%s jmp\n", jmpCode)
 		}
 	}
 
