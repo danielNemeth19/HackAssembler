@@ -50,16 +50,49 @@ func (symbolTable *SymbolTable) storeVariable(variable string) int {
 	return address
 }
 
-type Parser struct{}
+type Parser struct {
+	sourcePath   string
+	assemblyCode []string
+}
 
-func (parser Parser) isAInstruction(token string) bool {
+func (parser *Parser) getAssemblyCode() SymbolTable {
+	var symbolTable SymbolTable
+	symbolTable.initialize()
+	file, err := os.Open(parser.sourcePath)
+	checkError(err)
+	scanner := bufio.NewScanner(file)
+	counter := -1
+	for scanner.Scan() {
+		line := scanner.Text()
+		subs := strings.Split(line, "//")
+		if len(subs[0]) > 0 {
+			codeSnippet := strings.TrimSpace(subs[0])
+			if parser.isLabel(codeSnippet) {
+				symbolTable.storeLabel(codeSnippet, counter+1)
+			} else {
+				counter += 1
+				parser.assemblyCode = append(parser.assemblyCode, codeSnippet)
+			}
+		}
+	}
+	return symbolTable
+}
+
+func (parser *Parser) isLabel(token string) bool {
+	if strings.HasPrefix(token, "(") {
+		return true
+	}
+	return false
+}
+
+func (parser *Parser) isAInstruction(token string) bool {
 	if strings.HasPrefix(token, "@") {
 		return true
 	}
 	return false
 }
 
-func (parser Parser) getAddress(token string, table *SymbolTable) int {
+func (parser *Parser) getAddress(token string, table *SymbolTable) int {
 	token = token[1:]
 	address, err := strconv.Atoi(token)
 	if err == nil {
@@ -72,7 +105,7 @@ func (parser Parser) getAddress(token string, table *SymbolTable) int {
 	return address
 }
 
-func (parser Parser) parseCInstruction(codeSnippet string) (string, string, string) {
+func (parser *Parser) parseCInstruction(codeSnippet string) (string, string, string) {
 	var comp, dest, jmp string
 	subs := strings.Split(codeSnippet, "=")
 	if len(subs) == 2 {
@@ -135,30 +168,6 @@ func (translator HackTranslator) translateCInstruction(comp, dest, jmp string) s
 	return code
 }
 
-func readHackFile(fp string) ([]string, SymbolTable) {
-	var symbolTable SymbolTable
-	symbolTable.initialize()
-	file, err := os.Open(fp)
-	checkError(err)
-	scanner := bufio.NewScanner(file)
-	var assemblyCode []string
-	counter := -1
-	for scanner.Scan() {
-		line := scanner.Text()
-		subs := strings.Split(line, "//")
-		if len(subs[0]) > 0 {
-			codeSnippet := strings.TrimSpace(subs[0])
-			if strings.HasPrefix(codeSnippet, "(") {
-				symbolTable.storeLabel(codeSnippet, counter+1)
-			} else {
-				counter += 1
-				assemblyCode = append(assemblyCode, codeSnippet)
-			}
-		}
-	}
-	return assemblyCode, symbolTable
-}
-
 func parseArg() string {
 	if len(os.Args) != 2 {
 		log.Fatalf("Incorrect number of arguments. Got: %d", len(os.Args)-1)
@@ -173,13 +182,13 @@ func parseArg() string {
 
 func main() {
 	fp := parseArg()
-	assemblyCode, symbolTable := readHackFile(fp)
-	parser := Parser{}
+	parser := &Parser{sourcePath: fp}
+	symbolTable := parser.getAssemblyCode()
 	translator := HackTranslator{}
-	
+
 	f, err := os.Create("test.hack")
 	checkError(err)
-	for _, codeSnippet := range assemblyCode {
+	for _, codeSnippet := range parser.assemblyCode {
 		if parser.isAInstruction(codeSnippet) {
 			address := parser.getAddress(codeSnippet, &symbolTable)
 			code := translator.translateAInstruction(address)
