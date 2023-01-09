@@ -8,12 +8,18 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func checkError(e error) {
 	if e != nil {
 		log.Fatal(e)
 	}
+}
+
+func TimeTrack(start time.Time, name string) {
+	elapsed := time.Since(start)
+	log.Printf("%s took %s", name, elapsed)
 }
 
 type SymbolTable struct {
@@ -51,14 +57,19 @@ func (symbolTable *SymbolTable) storeVariable(variable string) int {
 }
 
 type Parser struct {
-	sourcePath   string
+	sourceFile   string
 	assemblyCode []string
+}
+
+func (parser *Parser) getDestinationFile() string {
+	hackExt := ".hack"
+	return parser.sourceFile[:len(parser.sourceFile)-len(".asm")] + hackExt
 }
 
 func (parser *Parser) getAssemblyCode() SymbolTable {
 	var symbolTable SymbolTable
 	symbolTable.initialize()
-	file, err := os.Open(parser.sourcePath)
+	file, err := os.Open(parser.sourceFile)
 	checkError(err)
 	scanner := bufio.NewScanner(file)
 	counter := -1
@@ -181,12 +192,15 @@ func parseArg() string {
 }
 
 func main() {
+	defer TimeTrack(time.Now(), "main")
 	fp := parseArg()
-	parser := &Parser{sourcePath: fp}
+	parser := &Parser{sourceFile: fp}
+	parser.getDestinationFile()
 	symbolTable := parser.getAssemblyCode()
 	translator := HackTranslator{}
 
-	f, err := os.Create("test.hack")
+	df := parser.getDestinationFile()
+	f, err := os.Create(df)
 	checkError(err)
 	for _, codeSnippet := range parser.assemblyCode {
 		if parser.isAInstruction(codeSnippet) {
