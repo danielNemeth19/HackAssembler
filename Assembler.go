@@ -41,7 +41,10 @@ func (symbolTable *SymbolTable) initialize() {
 
 func (symbolTable *SymbolTable) storeLabel(codeSnippet string, counter int) {
 	label := codeSnippet[1 : len(codeSnippet)-1]
-	symbolTable.table[label] = counter
+	_, found := symbolTable.table[label]
+	if found == false {
+		symbolTable.table[label] = counter
+	}
 }
 
 func (symbolTable *SymbolTable) getAddress(symbol string) (int, bool) {
@@ -61,14 +64,12 @@ type Parser struct {
 	assemblyCode []string
 }
 
-func (parser *Parser) getDestinationFile() string {
+func (parser *Parser) setDestinationFile() string {
 	hackExt := ".hack"
 	return parser.sourceFile[:len(parser.sourceFile)-len(".asm")] + hackExt
 }
 
-func (parser *Parser) getAssemblyCode() SymbolTable {
-	var symbolTable SymbolTable
-	symbolTable.initialize()
+func (parser *Parser) getAssemblyCode(symbolTable *SymbolTable) {
 	file, err := os.Open(parser.sourceFile)
 	checkError(err)
 	scanner := bufio.NewScanner(file)
@@ -86,7 +87,7 @@ func (parser *Parser) getAssemblyCode() SymbolTable {
 			}
 		}
 	}
-	return symbolTable
+	return
 }
 
 func (parser *Parser) isLabel(token string) bool {
@@ -129,9 +130,7 @@ func (parser *Parser) parseCInstruction(codeSnippet string) (string, string, str
 }
 
 type HackTranslator struct {
-	compMap map[string]string
-	destMap map[string]string
-	jmpMap  map[string]string
+	compMap, destMap, jmpMap map[string]string
 }
 
 func (translator *HackTranslator) initialize() {
@@ -202,12 +201,13 @@ func main() {
 	defer TimeTrack(time.Now(), "main")
 	fp := parseArg()
 	parser := Parser{sourceFile: fp}
-	parser.getDestinationFile()
-	symbolTable := parser.getAssemblyCode()
+	var symbolTable SymbolTable
+	symbolTable.initialize()
+	parser.getAssemblyCode(&symbolTable)
 	translator := HackTranslator{}
 	translator.initialize()
 
-	df := parser.getDestinationFile()
+	df := parser.setDestinationFile()
 	f, err := os.Create(df)
 	checkError(err)
 	for _, codeSnippet := range parser.assemblyCode {
