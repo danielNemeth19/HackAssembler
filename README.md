@@ -1,2 +1,2 @@
 # HackAssembler
-Hack Assembler written in Golang
+Hack Assembler written in Go

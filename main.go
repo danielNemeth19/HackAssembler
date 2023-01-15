@@ -1,7 +1,8 @@
 package main
 
 import (
-	"fmt"
+	"bufio"
+	"github.com/pkg/profile"
 	"log"
 	"os"
 	"path/filepath"
@@ -32,6 +33,7 @@ func parseArg() string {
 }
 
 func main() {
+	defer profile.Start(profile.ProfilePath(".")).Stop()
 	defer TimeTrack(time.Now(), "main")
 	fp := parseArg()
 	parser := Parser{SourceFile: fp}
@@ -44,19 +46,25 @@ func main() {
 	df := parser.SetDestinationFile()
 	f, err := os.Create(df)
 	CheckError(err)
+	buffer := bufio.NewWriter(f)
 	for _, codeSnippet := range parser.AssemblyCode {
 		if parser.IsAInstruction(codeSnippet) {
 			address := parser.GetAddress(codeSnippet, &symbolTable)
 			code := translator.TranslateAInstruction(address)
-			fmt.Fprintln(f, code)
+			buffer.WriteString(code + "\n")
 		} else {
 			comp, dest, jmp := parser.ParseCInstruction(codeSnippet)
 			compCode := translator.TranslateComp(comp)
 			destCode := translator.TranslateDest(dest)
 			jmpCode := translator.TranslateJmp(jmp)
 			code := translator.TranslateCInstruction(compCode, destCode, jmpCode)
-			fmt.Fprintln(f, code)
+			buffer.WriteString(code + "\n")
 		}
 	}
+	// flush buffered data to the file
+	if err := buffer.Flush(); err != nil {
+		log.Fatal(err)
+	}
+
 	f.Close()
 }
