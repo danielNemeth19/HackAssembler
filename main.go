@@ -33,7 +33,7 @@ func parseArg() string {
 }
 
 func main() {
-	defer profile.Start(profile.ProfilePath(".")).Stop()
+	defer profile.Start(profile.ProfilePath("profiling/")).Stop()
 	defer TimeTrack(time.Now(), "main")
 	fp := parseArg()
 	parser := Parser{SourceFile: fp}
@@ -61,10 +61,8 @@ func main() {
 			buffer.WriteString(code + "\n")
 		}
 	}
-	// flush buffered data to the file
-	if err := buffer.Flush(); err != nil {
-		log.Fatal(err)
-	}
+	err = buffer.Flush()
+	CheckError(err)
 
 	f.Close()
 }
