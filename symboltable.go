@@ -27,7 +27,7 @@ func (symbolTable *SymbolTable) StoreLabel(codeSnippet string, counter int) {
 	}
 }
 
-func (symbolTable *SymbolTable) GetAddress(symbol string) (int, bool) {
+func (symbolTable *SymbolTable) GetSymbolAddress(symbol string) (int, bool) {
 	address, found := symbolTable.table[symbol]
 	return address, found
 }

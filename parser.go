@@ -58,7 +58,7 @@ func (parser *Parser) GetAddress(token string, table *SymbolTable) int {
 	if err == nil {
 		return address
 	}
-	address, found := table.GetAddress(token)
+	address, found := table.GetSymbolAddress(token)
 	if found != true {
 		address = table.StoreVariable(token)
 	}
