@@ -71,16 +71,14 @@ func TestParser_IsSourceFile(t *testing.T) {
 
 func TestParser_IsLabel_False(t *testing.T) {
 	p := Parser{}
-	res := p.IsLabel("not a label")
-	if res == true {
+	if res := p.IsLabel("not a label"); res == true {
 		t.Errorf("Result incorrect: got %v, expected false\n", res)
 	}
 }
 
 func TestParser_IsLabel_True(t *testing.T) {
 	p := Parser{}
-	res := p.IsLabel("(thisIsALabel)")
-	if res != true {
+	if res := p.IsLabel("(thisIsLabel)"); res != true {
 		t.Errorf("Result incorrect: got %v, expected true\n", res)
 	}
 }
@@ -94,8 +92,7 @@ func TestParser_IsLabel_TestTable(t *testing.T) {
 		{code: "0;JMP", isLabel: false},
 	}
 	for _, data := range table {
-		res := p.IsLabel(data.code)
-		if res != data.isLabel {
+		if res := p.IsLabel(data.code); res != data.isLabel {
 			t.Errorf("Result incorrect: got %v, expected %v\n", res, data.isLabel)
 		}
 	}
@@ -105,8 +102,7 @@ func TestParser_IsAInstruction(t *testing.T) {
 	p := Parser{}
 	table := []inputTable{{code: "@256", isAInstruction: true}, {code: "0;JMP", isAInstruction: false}}
 	for _, data := range table {
-		res := p.IsAInstruction(data.code)
-		if res != data.isAInstruction {
+		if res := p.IsAInstruction(data.code); res != data.isAInstruction {
 			t.Errorf("Result incorrect: got %v, expected %v\n", res, data.isAInstruction)
 		}
 	}
@@ -131,8 +127,7 @@ func TestParser_GetAddress(t *testing.T) {
 		{token: "@second_var", address: 17},
 	}
 	for _, data := range resultTable {
-		res := p.GetAddress(data.token, &st)
-		if res != data.address {
+		if res := p.GetAddress(data.token, &st); res != data.address {
 			t.Errorf("Result incorrect: got %v, expected %v\n", res, data.address)
 		}
 	}
@@ -153,5 +148,21 @@ func TestParser_ParseCInstruction_Jump(t *testing.T) {
 	comp, dest, jmp := p.ParseCInstruction(code)
 	if comp != "D" || dest != "null" || jmp != "JGT" {
 		t.Errorf("Got %s %s %s - expected D null JGT\n", comp, dest, jmp)
+	}
+}
+
+func BenchmarkParser_ParseCInstruction(b *testing.B) {
+	p := Parser{}
+	for i := 0; i < b.N; i++ {
+		code := "D;JGT"
+		p.ParseCInstruction(code)
+	}
+}
+
+func BenchmarkParser_GetAddress(b *testing.B) {
+	p := Parser{}
+	st := makeSymbolTable()
+	for i := 0; i < b.N; i++ {
+		p.GetAddress("@newVar", &st)
 	}
 }
