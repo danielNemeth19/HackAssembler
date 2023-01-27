@@ -1,7 +1,9 @@
 package main
 
 import (
+	"io/fs"
 	"testing"
+	"time"
 )
 
 type inputTable struct {
@@ -16,7 +18,7 @@ type addressTable struct {
 }
 
 func makeParser() Parser {
-	return Parser{SourceFile: "test.asm"}
+	return Parser{Source: "test.asm"}
 }
 
 func makeSymbolTable() SymbolTable {
@@ -25,12 +27,49 @@ func makeSymbolTable() SymbolTable {
 	return symbolTable
 }
 
-func TestParser_SetDestinationFile(t *testing.T) {
+type FakeFile struct {
+	name     string
+	contents string
+	mode     fs.FileMode
+	size     int64
+}
+
+func (ff FakeFile) Name() string {
+	return ff.name
+}
+
+func (ff FakeFile) IsDir() bool {
+	return false
+}
+
+func (ff FakeFile) ModTime() time.Time {
+	return time.Time{}
+}
+
+func (ff FakeFile) Mode() fs.FileMode {
+	return ff.mode
+}
+
+func (ff FakeFile) Size() int64 {
+	return ff.size
+}
+
+func (ff FakeFile) Sys() any {
+	return nil
+}
+
+func TestParser_IsSourceFile(t *testing.T) {
 	p := makeParser()
-	expectedPath := "test.hack"
-	destPath := p.SetDestinationFile()
-	if destPath != expectedPath {
-		t.Errorf("Path incorrect: got %s, expected: %s", destPath, expectedPath)
+	fFile := FakeFile{name: "file.asm"}
+	res := p.IsSourceFile(fFile)
+	if res != true {
+		t.Errorf("Result incorrect: got %v, expected true\n", res)
+	}
+
+	fFile = FakeFile{name: "notsource.txt"}
+	res = p.IsSourceFile(fFile)
+	if res == true {
+		t.Errorf("Result incorrect: got %v, expected false\n", res)
 	}
 }
 
@@ -74,6 +113,15 @@ func TestParser_IsAInstruction(t *testing.T) {
 		if res != data.isAInstruction {
 			t.Errorf("Result incorrect: got %v, expected %v\n", res, data.isAInstruction)
 		}
+	}
+}
+
+func TestParser_SetDestinationFile(t *testing.T) {
+	p := makeParser()
+	expectedPath := "test.hack"
+	destPath := p.SetDestinationFile()
+	if destPath != expectedPath {
+		t.Errorf("Path incorrect: got %s, expected: %s", destPath, expectedPath)
 	}
 }
 

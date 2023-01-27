@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bufio"
+	"fmt"
 	"github.com/pkg/profile"
 	"log"
 	"os"
@@ -24,45 +24,34 @@ func parseArg() string {
 	if len(os.Args) != 2 {
 		log.Fatalf("Incorrect number of arguments. Got: %d", len(os.Args)-1)
 	}
-	inputFile := os.Args[1]
-	if extension := filepath.Ext(inputFile); extension != ".asm" {
-		log.Fatalf("Input file needs to be an asm file - received: %s", extension)
-	}
-	log.Printf("File to translate: %s", inputFile)
-	return inputFile
+	input := os.Args[1]
+	log.Printf("Source to translate: %s", input)
+	return input
 }
 
 func main() {
 	defer profile.Start(profile.ProfilePath("profiling/")).Stop()
 	defer TimeTrack(time.Now(), "main")
-	fp := parseArg()
-	parser := Parser{SourceFile: fp}
+	source := parseArg()
+	parser := Parser{Source: source}
 	var symbolTable SymbolTable
+	var translator HackTranslator
 	symbolTable.Initialize()
-	parser.GetAssemblyCode(&symbolTable)
-	translator := HackTranslator{}
 	translator.Initialize()
 
-	df := parser.SetDestinationFile()
-	f, err := os.Create(df)
-	CheckError(err)
-	buffer := bufio.NewWriter(f)
-	for _, codeSnippet := range parser.AssemblyCode {
-		if parser.IsAInstruction(codeSnippet) {
-			address := parser.GetAddress(codeSnippet, &symbolTable)
-			code := translator.TranslateAInstruction(address)
-			buffer.WriteString(code + "\n")
-		} else {
-			comp, dest, jmp := parser.ParseCInstruction(codeSnippet)
-			compCode := translator.TranslateComp(comp)
-			destCode := translator.TranslateDest(dest)
-			jmpCode := translator.TranslateJmp(jmp)
-			code := translator.TranslateCInstruction(compCode, destCode, jmpCode)
-			buffer.WriteString(code + "\n")
-		}
+	if isDir := parser.IsSourceDir(); isDir == false {
+		parser.TranslateFile(parser.Source, &symbolTable, translator)
+	} else {
+		fmt.Printf("Source is a directory: %s\n", parser.Source)
+		e := filepath.Walk(parser.Source, func(path string, f os.FileInfo, err error) error {
+			fmt.Printf("here: %s\n", path)
+			if extension := filepath.Ext(f.Name()); extension == ".asm" {
+				fmt.Printf("Input file needs to be translated: %s\n", f.Name())
+				parser.Source = f.Name()
+				parser.TranslateFile(f.Name(), &symbolTable, translator)
+			}
+			return err
+		})
+		CheckError(e)
 	}
-	err = buffer.Flush()
-	CheckError(err)
-
-	f.Close()
 }
