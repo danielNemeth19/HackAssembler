@@ -1,11 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"github.com/pkg/profile"
 	"log"
 	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -33,25 +31,15 @@ func main() {
 	defer profile.Start(profile.ProfilePath("profiling/")).Stop()
 	defer TimeTrack(time.Now(), "main")
 	source := parseArg()
-	parser := Parser{Source: source}
+
+	var parser Parser
 	var symbolTable SymbolTable
 	var translator HackTranslator
+	parser.Initialize(source)
 	symbolTable.Initialize()
 	translator.Initialize()
 
-	if isDir := parser.IsSourceDir(); isDir == false {
-		parser.TranslateFile(parser.Source, &symbolTable, translator)
-	} else {
-		fmt.Printf("Source is a directory: %s\n", parser.Source)
-		e := filepath.Walk(parser.Source, func(path string, f os.FileInfo, err error) error {
-			fmt.Printf("here: %s\n", path)
-			if extension := filepath.Ext(f.Name()); extension == ".asm" {
-				fmt.Printf("Input file needs to be translated: %s\n", f.Name())
-				parser.Source = f.Name()
-				parser.TranslateFile(f.Name(), &symbolTable, translator)
-			}
-			return err
-		})
-		CheckError(e)
+	for _, sf := range parser.FilesToTranslate {
+		parser.TranslateFile(sf, &symbolTable, translator)
 	}
 }

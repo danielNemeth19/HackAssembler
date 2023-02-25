@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -10,8 +9,20 @@ import (
 )
 
 type Parser struct {
-	Source       string
-	AssemblyCode []string
+	Source           string
+	FilesToTranslate []string
+	AssemblyCode     []string
+}
+
+func (parser *Parser) Initialize(sourceInput string) {
+	e := filepath.Walk(sourceInput, func(path string, f os.FileInfo, err error) error {
+		if extension := filepath.Ext(f.Name()); extension == ".asm" {
+			fullName, _ := filepath.Abs(path)
+			parser.FilesToTranslate = append(parser.FilesToTranslate, fullName)
+		}
+		return err
+	})
+	CheckError(e)
 }
 
 func (parser *Parser) IsSourceDir() bool {
@@ -42,13 +53,13 @@ func (parser *Parser) IsAInstruction(token string) bool {
 	return false
 }
 
-func (parser *Parser) SetDestinationFile() string {
+func (parser *Parser) SetDestinationFile(fn string) string {
 	hackExt := ".hack"
-	return parser.Source[:len(parser.Source)-len(".asm")] + hackExt
+	return fn[:len(fn)-len(".asm")] + hackExt
 }
 
-func (parser *Parser) GetAssemblyCode(symbolTable *SymbolTable) {
-	file, err := os.Open(parser.Source)
+func (parser *Parser) GetAssemblyCode(fn string, symbolTable *SymbolTable) {
+	file, err := os.Open(fn)
 	CheckError(err)
 	scanner := bufio.NewScanner(file)
 	counter := -1
@@ -94,9 +105,8 @@ func (parser *Parser) ParseCInstruction(codeSnippet string) (string, string, str
 }
 
 func (parser *Parser) TranslateFile(fn string, st *SymbolTable, tr HackTranslator) {
-	parser.GetAssemblyCode(st)
-	df := parser.SetDestinationFile()
-	fmt.Printf("File name is: %s\n", df)
+	parser.GetAssemblyCode(fn, st)
+	df := parser.SetDestinationFile(fn)
 	f, err := os.Create(df)
 	CheckError(err)
 	buffer := bufio.NewWriter(f)
