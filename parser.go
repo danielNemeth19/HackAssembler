@@ -9,9 +9,7 @@ import (
 )
 
 type Parser struct {
-	Source           string
 	FilesToTranslate []string
-	AssemblyCode     []string
 }
 
 func (parser *Parser) Initialize(sourceInput string) {
@@ -23,13 +21,6 @@ func (parser *Parser) Initialize(sourceInput string) {
 		return err
 	})
 	CheckError(e)
-}
-
-func (parser *Parser) IsSourceDir() bool {
-	if stat, err := os.Stat(parser.Source); err == nil && stat.IsDir() {
-		return true
-	}
-	return false
 }
 
 func (parser *Parser) IsSourceFile(f os.FileInfo) bool {
@@ -58,11 +49,12 @@ func (parser *Parser) SetDestinationFile(fn string) string {
 	return fn[:len(fn)-len(".asm")] + hackExt
 }
 
-func (parser *Parser) GetAssemblyCode(fn string, symbolTable *SymbolTable) {
+func (parser *Parser) GetAssemblyCode(fn string, symbolTable *SymbolTable) []string {
 	file, err := os.Open(fn)
 	CheckError(err)
 	scanner := bufio.NewScanner(file)
 	counter := -1
+	var assemblyCode []string
 	for scanner.Scan() {
 		line := scanner.Text()
 		subs := strings.Split(line, "//")
@@ -72,11 +64,11 @@ func (parser *Parser) GetAssemblyCode(fn string, symbolTable *SymbolTable) {
 				symbolTable.StoreLabel(codeSnippet, counter+1)
 			} else {
 				counter += 1
-				parser.AssemblyCode = append(parser.AssemblyCode, codeSnippet)
+				assemblyCode = append(assemblyCode, codeSnippet)
 			}
 		}
 	}
-	return
+	return assemblyCode
 }
 
 func (parser *Parser) GetAddress(token string, table *SymbolTable) int {
@@ -105,12 +97,12 @@ func (parser *Parser) ParseCInstruction(codeSnippet string) (string, string, str
 }
 
 func (parser *Parser) TranslateFile(fn string, st *SymbolTable, tr HackTranslator) {
-	parser.GetAssemblyCode(fn, st)
+	assemblyCode := parser.GetAssemblyCode(fn, st)
 	df := parser.SetDestinationFile(fn)
 	f, err := os.Create(df)
 	CheckError(err)
 	buffer := bufio.NewWriter(f)
-	for _, codeSnippet := range parser.AssemblyCode {
+	for _, codeSnippet := range assemblyCode {
 		if parser.IsAInstruction(codeSnippet) {
 			address := parser.GetAddress(codeSnippet, st)
 			code := tr.TranslateAInstruction(address)
