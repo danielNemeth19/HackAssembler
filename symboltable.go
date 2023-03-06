@@ -19,12 +19,14 @@ func (symbolTable *SymbolTable) Initialize() {
 	symbolTable.nextFreeMem = 16
 }
 
-func (symbolTable *SymbolTable) StoreLabel(codeSnippet string, counter int) {
+func (symbolTable *SymbolTable) StoreLabel(codeSnippet string, counter int) bool {
 	label := codeSnippet[1 : len(codeSnippet)-1]
 	_, found := symbolTable.table[label]
 	if found == false {
 		symbolTable.table[label] = counter
+		return true
 	}
+	return false
 }
 
 func (symbolTable *SymbolTable) GetSymbolAddress(symbol string) (int, bool) {
