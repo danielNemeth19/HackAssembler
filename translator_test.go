@@ -62,3 +62,46 @@ func TestHackTranslator_TranslateAInstruction(t *testing.T) {
 		t.Errorf("Result incorrect: got %s, expected %s\n", code, expected)
 	}
 }
+
+func TestHackTranslator_TranslateComp(t *testing.T) {
+	tr := HackTranslator{}
+	tr.Initialize()
+
+	for c, v := range compMap {
+		if code := tr.TranslateComp(c); code != v {
+			t.Errorf("For comp %s result incorrect: got %s, expected %s\n", c, code, v)
+		}
+	}
+}
+
+func TestHackTranslator_TranslateDest(t *testing.T) {
+	tr := HackTranslator{}
+	tr.Initialize()
+
+	for d, v := range destMap {
+		if code := tr.TranslateDest(d); code != v {
+			t.Errorf("For dest %s result incorrect: got %s, expected %s\n", d, code, v)
+		}
+	}
+}
+
+func TestHackTranslator_TranslateJmp(t *testing.T) {
+	tr := HackTranslator{}
+	tr.Initialize()
+
+	for j, v := range jmpMap {
+		if code := tr.TranslateJmp(j); code != v {
+			t.Errorf("For jmp %s result incorrect: got %s, expected %s\n", j, code, v)
+		}
+	}
+}
+
+func TestHackTranslator_TranslateCInstruction(t *testing.T) {
+	tr := HackTranslator{}
+	tr.Initialize()
+
+	code := tr.TranslateCInstruction("0110000", "010", "000")
+	if code != "1110110000010000" {
+		t.Errorf("Result incorrect: got %s, expected %s\n", code, "")
+	}
+}
