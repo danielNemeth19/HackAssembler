@@ -1,3 +1,9 @@
+TEST_FILE_PATH = $(CURDIR)/TestFiles
+
+.PHONY: run
+run:
+	go build && ./HackAssembler $(TEST_FILE_PATH)/$(arg)
+
 .PHONY: test
 test:
 	go test -v

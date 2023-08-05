@@ -19,11 +19,12 @@ coverage.html
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
-#profiling
+# profiling
 profiling/*.pprof
 
-#extra large assembly and hack files
-HugePong.*
+# Test files and reference files (both asm and hack)
+ReferenceFiles
+TestFiles
 
 # compiled HackAssembler
 HackAssembler
